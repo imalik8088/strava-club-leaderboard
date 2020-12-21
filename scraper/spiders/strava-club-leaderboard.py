@@ -47,7 +47,7 @@ class StravaSpider(scrapy.Spider):
         self.logger.info(f"[Cookie] {self.cookies}")
         self.logger.info('Logged in... ')
 
-        club_url = 'https://www.strava.com/clubs/285486/members'
+        club_url = f"{self.BASE_URL}/clubs/285486/members"
         yield scrapy.Request(url=club_url, callback=self.club_member_overview)
 
 
@@ -65,6 +65,12 @@ class StravaSpider(scrapy.Spider):
                                  headers=self.headers,
                                  cookies=self.cookies,
                                  callback=self.profile_crawler)
+
+        NEXT_PAGE_SELECTOR = 'nav > ul.pagination > li.next_page > a::attr(href)'
+        if (len(response.css(NEXT_PAGE_SELECTOR))  > 0):
+            next_page_path = response.css(NEXT_PAGE_SELECTOR).extract_first()
+            next_page_url = f"{self.BASE_URL}/{next_page_path}"
+            yield scrapy.Request(url=next_page_url, callback=self.club_member_overview)
 
     def profile_crawler(self, response):
         user_id = re.findall(r'athletes/(\d*)', response.request.url, re.M | re.I)[0]
@@ -85,7 +91,7 @@ class StravaSpider(scrapy.Spider):
             'swimmingDurationInMinute': swimming_miutes
         }, self.Leaderboard.user_id == user_id)
 
-        self.logger.info('Done.')
+        self.logger.info(f"Done for {response.request.url}")
 
     def _get_swimming_hours(self, user_id, response):
         CYCLING_HOURS_TOTAL_SELECTOR = "#swimming-ytd > tr:nth-child(2) > td:nth-child(2)"
