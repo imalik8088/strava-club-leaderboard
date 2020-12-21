@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from .credentials import strava
 import re
 
 import scrapy
@@ -7,6 +6,7 @@ from scrapy.http import FormRequest
 from tinydb import TinyDB, Query
 from tinydb.database import Table
 
+from .credentials import strava
 
 class StravaSpider(scrapy.Spider):
     BASE_URL = 'https://www.strava.com'
@@ -16,6 +16,8 @@ class StravaSpider(scrapy.Spider):
     cookies = {}
     db: Table = TinyDB('./db/strava-leaderboard.json')
     Leaderboard = Query()
+    club_id = None
+    year = None
     headers = {
         'authority': 'www.strava.com',
         'pragma': 'no-cache',
@@ -41,21 +43,24 @@ class StravaSpider(scrapy.Spider):
                                         meta={'dont_redirect': True, 'handle_httpstatus_list': [302]},
                                         callback=self.after_login)
 
+    def __init__(self, club_id, year=2020, **kwargs):
+        self.club_id = club_id
+        self.year = year
+
     def after_login(self, response):
         cookie = response.headers.getlist('Set-Cookie')[0].decode("utf-8").split(';')[0]
         self.cookies = dict(cookie.split("=") for x in cookie.split(";"))
         self.logger.info(f"[Cookie] {self.cookies}")
         self.logger.info('Logged in... ')
 
-        club_url = f"{self.BASE_URL}/clubs/285486/members"
+        club_url = f"{self.BASE_URL}/clubs/{self.club_id}/members"
         yield scrapy.Request(url=club_url, callback=self.club_member_overview)
-
 
     def club_member_overview(self, response):
         MEMBER_SELECTOR = 'div.border-top > ul.list-athletes > li > div.text-headline'
         for list_user_block in response.css(MEMBER_SELECTOR):
             profile_url = self.BASE_URL + list_user_block.css("a::attr(href)").extract_first()
-            comparision_data_url = profile_url + "/profile_sidebar_comparison?hl=en-US&ytd_year=2020"
+            comparision_data_url = f"{profile_url}/profile_sidebar_comparison?hl=en-US&ytd_year={self.year}"
             user_name = list_user_block.css("a::text").extract_first()
 
             user_id = re.findall(r'athletes/(\d*)', profile_url, re.M | re.I)[0]
@@ -67,31 +72,25 @@ class StravaSpider(scrapy.Spider):
                                  callback=self.profile_crawler)
 
         NEXT_PAGE_SELECTOR = 'nav > ul.pagination > li.next_page > a::attr(href)'
-        if (len(response.css(NEXT_PAGE_SELECTOR))  > 0):
+        if (len(response.css(NEXT_PAGE_SELECTOR)) > 0):
             next_page_path = response.css(NEXT_PAGE_SELECTOR).extract_first()
-            next_page_url = f"{self.BASE_URL}/{next_page_path}"
+            next_page_url = f"{self.BASE_URL}{next_page_path}"
+            self.logger.info(f"next page: {next_page_url}")
             yield scrapy.Request(url=next_page_url, callback=self.club_member_overview)
 
     def profile_crawler(self, response):
         user_id = re.findall(r'athletes/(\d*)', response.request.url, re.M | re.I)[0]
 
-        cycling_kilometers = self._get_cycling_kilometers(user_id, response)
-        cycling_minutes = self._get_cycling_hours(user_id, response)
-        running_kilometers = self._get_running_kilometers(user_id, response)
-        running_minutes = self._get_running_hours(user_id, response)
-        swimming_meters = self._get_swimming_meters(user_id, response)
-        swimming_miutes = self._get_swimming_hours(user_id, response)
-
         self.db.upsert({
-            'cyclingDistanceInKm': cycling_kilometers,
-            'cyclingDurationInMinute': cycling_minutes,
-            'runningDistanceInKm': running_kilometers,
-            'runningDurationInMinute': running_minutes,
-            'swimmingDistanceInMeter': swimming_meters,
-            'swimmingDurationInMinute': swimming_miutes
+            'cycling_distance_in_km': (self._get_cycling_kilometers(user_id, response)),
+            'cycling_duration_in_minute': (self._get_cycling_hours(user_id, response)),
+            'running_distance_in_km': (self._get_running_kilometers(user_id, response)),
+            'running_duration_in_minute': (self._get_running_hours(user_id, response)),
+            'swimming_distance_in_meter': (self._get_swimming_meters(user_id, response)),
+            'swimming_duration_in_minute': (self._get_swimming_hours(user_id, response))
         }, self.Leaderboard.user_id == user_id)
 
-        self.logger.info(f"Done for {response.request.url}")
+        self.logger.debug(f"Done for {response.request.url}")
 
     def _get_swimming_hours(self, user_id, response):
         CYCLING_HOURS_TOTAL_SELECTOR = "#swimming-ytd > tr:nth-child(2) > td:nth-child(2)"
