@@ -1,3 +1,8 @@
+## USER DEFINED
+db/strava-leaderboard.json
+scraper/spiders/credentials.py
+## USER DEFINED
+
 
 # Created by https://www.gitignore.io/api/python,intellij,virtualenv
 # Edit at https://www.gitignore.io/?templates=python,intellij,virtualenv
