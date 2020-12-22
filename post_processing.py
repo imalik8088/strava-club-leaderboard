@@ -75,7 +75,6 @@ for index, member in enumerate(leaderboard_duration, start=1):
 print()
 
 
-
 # ----------- LEADERBOARD: cycling
 class CyclingLeader(BaseModel):
     name: str
@@ -90,6 +89,7 @@ print("🚴 Most active cyclists")
 for index, member in enumerate(cycling_distance_in_km[:5], start=1):
     print(f"{index}. {member.name} - {member.cycling_distance_in_km} Km")
 print()
+
 # ----------- LEADERBOARD: running
 class RunnerLeader(BaseModel):
     name: str
@@ -101,10 +101,11 @@ for k, v in members.items():
 
 running_distance_in_km = sorted(leaderboard_cycling, key=lambda k: k.running_distance_in_km, reverse=True)
 
-print("🚴 Most active runner")
+print("🏃 Most active runner")
 for index, member in enumerate(running_distance_in_km[:5], start=1):
     print(f"{index}. {member.name} - {member.running_distance_in_km} Km")
 print()
+
 # ----------- LEADERBOARD: swimming
 class SwimmingLeader(BaseModel):
     name: str
@@ -116,6 +117,6 @@ for k, v in members.items():
 
 swimming_distance_in_meter = sorted(leaderboard_cycling, key=lambda k: k.swimming_distance_in_meter, reverse=True)
 
-print("🚴 Most active swimmer")
+print("🏊‍ Most active swimmer")
 for index, member in enumerate(swimming_distance_in_meter[:5], start=1):
     print(f"{index}. {member.name} - {member.swimming_distance_in_meter} meter")

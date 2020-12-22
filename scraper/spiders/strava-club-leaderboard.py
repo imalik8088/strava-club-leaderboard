@@ -8,13 +8,14 @@ from tinydb.database import Table
 
 from .credentials import strava
 
+
 class StravaSpider(scrapy.Spider):
     BASE_URL = 'https://www.strava.com'
     name = 'strava'
     allowed_domains = ['strava.com']
     start_urls = ['https://www.strava.com/login']
     cookies = {}
-    db: Table = TinyDB('./db/strava-leaderboard.json')
+    db: Table = None
     Leaderboard = Query()
     club_id = None
     year = None
@@ -46,6 +47,7 @@ class StravaSpider(scrapy.Spider):
     def __init__(self, club_id, year=2020, **kwargs):
         self.club_id = club_id
         self.year = year
+        self.db = TinyDB(f"./db/strava-leaderboard-{club_id}-{year}.json")
 
     def after_login(self, response):
         cookie = response.headers.getlist('Set-Cookie')[0].decode("utf-8").split(';')[0]

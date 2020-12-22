@@ -20,10 +20,10 @@ parsed xxx members
 🚴 Most active cyclists
 1. Qwe rty - 1234.1 Km
 
-🚴 Most active runner
+🏃 Most active runner
 1. Qwe rty - 123.1 Km
 
-🚴 Most active swimmer
+🏊‍ Most active swimmer
 2. Qwe rty - 123 meter
 ```
 

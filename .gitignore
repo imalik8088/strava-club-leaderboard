@@ -1,5 +1,5 @@
 ## USER DEFINED
-db/strava-leaderboard.json
+db/
 scraper/spiders/credentials.py
 ## USER DEFINED
 
