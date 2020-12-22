@@ -69,7 +69,11 @@ for member in total_member_activity_duration[:5]:
         name=member.name,
         duration=_minutes_in_hours(member.duration)))
 
-print(f"[🕓] Most active member: {leaderboard_duration}")
+print("🕓 Most active member:")
+for index, member in enumerate(leaderboard_duration, start=1):
+    print(f"{index}. {member.name} - {member.duration}")
+print()
+
 
 
 # ----------- LEADERBOARD: cycling
@@ -82,8 +86,10 @@ for k, v in members.items():
     leaderboard_cycling.append(CyclingLeader(name=v.name, cycling_distance_in_km=v.cycling_distance_in_km))
 
 cycling_distance_in_km = sorted(leaderboard_cycling, key=lambda k: k.cycling_distance_in_km, reverse=True)
-print(f"[🚴] Most active cyclists {cycling_distance_in_km[:5]}")
-
+print("🚴 Most active cyclists")
+for index, member in enumerate(cycling_distance_in_km[:5], start=1):
+    print(f"{index}. {member.name} - {member.cycling_distance_in_km} Km")
+print()
 # ----------- LEADERBOARD: running
 class RunnerLeader(BaseModel):
     name: str
@@ -94,16 +100,22 @@ for k, v in members.items():
     leaderboard_cycling.append(RunnerLeader(name=v.name, running_distance_in_km=v.running_distance_in_km))
 
 running_distance_in_km = sorted(leaderboard_cycling, key=lambda k: k.running_distance_in_km, reverse=True)
-print(f"[🏃‍] Most active runner {running_distance_in_km[:5]}")
 
+print("🚴 Most active runner")
+for index, member in enumerate(running_distance_in_km[:5], start=1):
+    print(f"{index}. {member.name} - {member.running_distance_in_km} Km")
+print()
 # ----------- LEADERBOARD: swimming
 class SwimmingLeader(BaseModel):
     name: str
-    swimming_distance_in_meter: float
+    swimming_distance_in_meter: int
 
 leaderboard_cycling = []
 for k, v in members.items():
     leaderboard_cycling.append(SwimmingLeader(name=v.name, swimming_distance_in_meter=v.swimming_distance_in_meter))
 
 swimming_distance_in_meter = sorted(leaderboard_cycling, key=lambda k: k.swimming_distance_in_meter, reverse=True)
-print(f"[🏊‍] Most active swimmer {swimming_distance_in_meter[:5]}")
+
+print("🚴 Most active swimmer")
+for index, member in enumerate(swimming_distance_in_meter[:5], start=1):
+    print(f"{index}. {member.name} - {member.swimming_distance_in_meter} meter")

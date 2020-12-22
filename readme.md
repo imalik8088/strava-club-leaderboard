@@ -12,12 +12,19 @@ python post_processing.py
 #### Output
 
 ```bash
-❯ python post_processing.py 
-parsed 404 members
-[🕓] Most active member: [ActiveLeader(name='Mno Pqr', duration='100 hours 46 minutes')]
-[🚴] Most active cyclists [CyclingLeader(name='Xyz Abc', cycling_distance_in_km=1234.5)]
-[🏃‍] Most active runner [RunnerLeader(name='Abc Def', running_distance_in_km=123.1)]
-[🏊‍] Most active swimmer [SwimmingLeader(name='Qwe rty', swimming_distance_in_meter=12345.0)]
+❯ python post_processing.py
+parsed xxx members
+🕓 Most active member:
+1. Qwe rty - 123 hours 12 minutes
+
+🚴 Most active cyclists
+1. Qwe rty - 1234.1 Km
+
+🚴 Most active runner
+1. Qwe rty - 123.1 Km
+
+🚴 Most active swimmer
+2. Qwe rty - 123 meter
 ```
 
  
