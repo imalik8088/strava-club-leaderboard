@@ -23,7 +23,9 @@ def _minutes_in_hours(minutes):
     return "%d hours %02d minutes" % (hours, minute)
 
 
-db: Table = TinyDB('./db/strava-leaderboard.json')
+TOP_X_MEBMER = 5
+
+db: Table = TinyDB('./db/strava-leaderboard-14632-2020.json')
 Leaderboard = Query()
 
 members = {}
@@ -45,15 +47,18 @@ for entry in get_all_entries:
 
 print(f"parsed {len(members)} members")
 
+
 # ----------- LEADERBOARD: active member
 class ActiveLeader(BaseModel):
     name: str
     duration: str
 
+
 class UserDuration(BaseModel):
     user_id: str
     name: str
     duration: int
+
 
 total_member_activity_duration = []
 for user_id, m in members.items():
@@ -64,7 +69,7 @@ for user_id, m in members.items():
 
 total_member_activity_duration = sorted(total_member_activity_duration, key=lambda k: k.duration, reverse=True)
 leaderboard_duration = []
-for member in total_member_activity_duration[:5]:
+for member in total_member_activity_duration[:TOP_X_MEBMER]:
     leaderboard_duration.append(ActiveLeader(
         name=member.name,
         duration=_minutes_in_hours(member.duration)))
@@ -80,20 +85,23 @@ class CyclingLeader(BaseModel):
     name: str
     cycling_distance_in_km: float
 
+
 leaderboard_cycling = []
 for k, v in members.items():
     leaderboard_cycling.append(CyclingLeader(name=v.name, cycling_distance_in_km=v.cycling_distance_in_km))
 
 cycling_distance_in_km = sorted(leaderboard_cycling, key=lambda k: k.cycling_distance_in_km, reverse=True)
 print("🚴 Most active cyclists")
-for index, member in enumerate(cycling_distance_in_km[:5], start=1):
+for index, member in enumerate(cycling_distance_in_km[:TOP_X_MEBMER], start=1):
     print(f"{index}. {member.name} - {member.cycling_distance_in_km} Km")
 print()
+
 
 # ----------- LEADERBOARD: running
 class RunnerLeader(BaseModel):
     name: str
     running_distance_in_km: float
+
 
 leaderboard_cycling = []
 for k, v in members.items():
@@ -102,14 +110,16 @@ for k, v in members.items():
 running_distance_in_km = sorted(leaderboard_cycling, key=lambda k: k.running_distance_in_km, reverse=True)
 
 print("🏃 Most active runner")
-for index, member in enumerate(running_distance_in_km[:5], start=1):
+for index, member in enumerate(running_distance_in_km[:TOP_X_MEBMER], start=1):
     print(f"{index}. {member.name} - {member.running_distance_in_km} Km")
 print()
+
 
 # ----------- LEADERBOARD: swimming
 class SwimmingLeader(BaseModel):
     name: str
     swimming_distance_in_meter: int
+
 
 leaderboard_cycling = []
 for k, v in members.items():
@@ -118,5 +128,5 @@ for k, v in members.items():
 swimming_distance_in_meter = sorted(leaderboard_cycling, key=lambda k: k.swimming_distance_in_meter, reverse=True)
 
 print("🏊‍ Most active swimmer")
-for index, member in enumerate(swimming_distance_in_meter[:5], start=1):
+for index, member in enumerate(swimming_distance_in_meter[:TOP_X_MEBMER], start=1):
     print(f"{index}. {member.name} - {member.swimming_distance_in_meter} meter")
