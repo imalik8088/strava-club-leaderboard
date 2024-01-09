@@ -44,7 +44,7 @@ class StravaSpider(scrapy.Spider):
                                         meta={'dont_redirect': True, 'handle_httpstatus_list': [302]},
                                         callback=self.after_login)
 
-    def __init__(self, club_id, year=2020, **kwargs):
+    def __init__(self, club_id, year=2023, **kwargs):
         self.club_id = club_id
         self.year = year
         self.db = TinyDB(f"./db/strava-leaderboard-{club_id}-{year}.json")
@@ -83,19 +83,70 @@ class StravaSpider(scrapy.Spider):
     def profile_crawler(self, response):
         user_id = re.findall(r'athletes/(\d*)', response.request.url, re.M | re.I)[0]
 
+        # running
+        sport_tab_index_for_run = self._get_sport_tab_index(response, 'Run')
+        running_km = 0
+        running_hours = 0
+        if sport_tab_index_for_run != None:
+            running_km = self._get_running_kilometers(user_id, response, sport_tab_index_for_run)
+            running_hours = self._get_running_hours(user_id, response, sport_tab_index_for_run)
+
+        # cycling
+        sport_tab_index_for_cycling = self._get_sport_tab_index(response, 'Ride')
+        cycling_km = 0
+        cycling_hours = 0
+        cycling_elevation = 0
+        if sport_tab_index_for_cycling != None:
+            cycling_km = self._get_cycling_kilometers(user_id, response, sport_tab_index_for_cycling)
+            cycling_elevation = self._get_cycling_elevation(user_id, response, sport_tab_index_for_cycling)
+            cycling_hours = self._get_cycling_hours(user_id, response, sport_tab_index_for_cycling)
+
+        # swimming
+        sport_tab_index_for_swim = self._get_sport_tab_index(response, 'Swim')
+        swim_km = 0
+        swim_hours = 0
+        if sport_tab_index_for_swim != None:
+            swim_km = self._get_swimming_meters(user_id, response, sport_tab_index_for_swim)
+            swim_hours = self._get_swimming_hours(user_id, response, sport_tab_index_for_swim)
+
+
         self.db.upsert({
-            'cycling_distance_in_km': (self._get_cycling_kilometers(user_id, response)),
-            'cycling_duration_in_minute': (self._get_cycling_hours(user_id, response)),
-            'running_distance_in_km': (self._get_running_kilometers(user_id, response)),
-            'running_duration_in_minute': (self._get_running_hours(user_id, response)),
-            'swimming_distance_in_meter': (self._get_swimming_meters(user_id, response)),
-            'swimming_duration_in_minute': (self._get_swimming_hours(user_id, response))
+            'cycling_distance_in_km': cycling_km,
+            'cycling_duration_in_minute': cycling_hours,
+            'cycling_elevation_in_meter': cycling_elevation,
+            'running_distance_in_km': running_km,
+            'running_duration_in_minute': running_hours,
+            'swimming_distance_in_meter': swim_km,
+            'swimming_duration_in_minute': swim_hours
         }, self.Leaderboard.user_id == user_id)
 
         self.logger.debug(f"Done for {response.request.url}")
 
-    def _get_swimming_hours(self, user_id, response):
-        CYCLING_HOURS_TOTAL_SELECTOR = "#swimming-ytd > tr:nth-child(2) > td:nth-child(2)"
+    def _get_sport_tab_index(self, response, sport_activity) -> str | None:
+        RUNNING_SELECTOR = 'button.selected[title="%s"]' % sport_activity
+        css_classes_of_activity = response.css(RUNNING_SELECTOR).xpath("@class").extract()
+        pattern = r'sport-\d+-tab'
+        css_classes_in_list = " ".join(css_classes_of_activity).split(" ")
+        matching_items = [item for item in css_classes_in_list if re.match(pattern, item)]
+        self.logger.debug('Found css class %s for sport activity %s' % (matching_items, sport_activity))
+
+        if len(matching_items) > 0:
+            return matching_items[0].split("-tab")[0]
+        else:
+            return None
+
+    def _get_swimming_hours(self, user_id, response, sport_tab_index):
+        HOURS_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(3) > td:nth-child(2)' % sport_tab_index
+        raw_time = response.css(HOURS_TOTAL_SELECTOR).extract_first()
+        hours_and_minutes = re.findall(r'(\d{1,})', raw_time, re.M | re.I)
+        minutes_from_hours = int(hours_and_minutes[0]) * 60
+        minutes = int(hours_and_minutes[1])
+        total_minutes = minutes_from_hours + minutes
+        self.logger.info(f"[Cycling] {hours_and_minutes[0]} hours and {hours_and_minutes[1]} minutes")
+        return total_minutes
+
+    def _get_cycling_hours(self, user_id, response, sport_tab_index):
+        CYCLING_HOURS_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(4) > td:nth-child(2)' % sport_tab_index
         raw_time = response.css(CYCLING_HOURS_TOTAL_SELECTOR).extract_first()
         hours_and_minutes = re.findall(r'(\d{1,})', raw_time, re.M | re.I)
         minutes_from_hours = int(hours_and_minutes[0]) * 60
@@ -104,18 +155,8 @@ class StravaSpider(scrapy.Spider):
         self.logger.info(f"[Cycling] {hours_and_minutes[0]} hours and {hours_and_minutes[1]} minutes")
         return total_minutes
 
-    def _get_cycling_hours(self, user_id, response):
-        CYCLING_HOURS_TOTAL_SELECTOR = "#cycling-ytd > tr:nth-child(2) > td:nth-child(2)"
-        raw_time = response.css(CYCLING_HOURS_TOTAL_SELECTOR).extract_first()
-        hours_and_minutes = re.findall(r'(\d{1,})', raw_time, re.M | re.I)
-        minutes_from_hours = int(hours_and_minutes[0]) * 60
-        minutes = int(hours_and_minutes[1])
-        total_minutes = minutes_from_hours + minutes
-        self.logger.info(f"[Cycling] {hours_and_minutes[0]} hours and {hours_and_minutes[1]} minutes")
-        return total_minutes
-
-    def _get_running_hours(self, user_id, response):
-        CYCLING_HOURS_TOTAL_SELECTOR = "#running-ytd > tr:nth-child(2) > td:nth-child(2)"
+    def _get_running_hours(self, user_id, response, sport_tab_index):
+        CYCLING_HOURS_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(3) > td:nth-child(2)' % sport_tab_index
         raw_time = response.css(CYCLING_HOURS_TOTAL_SELECTOR).extract_first()
         hours_and_minutes = re.findall(r'(\d{1,})', raw_time, re.M | re.I)
         minutes_from_hours = int(hours_and_minutes[0]) * 60
@@ -124,25 +165,33 @@ class StravaSpider(scrapy.Spider):
         self.logger.info(f"[Running] {hours_and_minutes[0]} hours and {hours_and_minutes[1]} minutes")
         return total_minutes
 
-    def _get_swimming_meters(self, user_id, response):
-        CYCLING_KM_TOTAL_SELECTOR = '#swimming-ytd > tr:nth-child(1) > td:nth-child(2)'
-        raw_meter = response.css(CYCLING_KM_TOTAL_SELECTOR).extract_first()
+    def _get_swimming_meters(self, user_id, response, sport_tab_index):
+        METER_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(2) td:nth-child(2)' % sport_tab_index
+        raw_meter = response.css(METER_TOTAL_SELECTOR).extract_first()
         raw_meter_numbers = re.findall(r'<td>(([0-9]*[,]?[0-9]*)) m</td>', raw_meter, re.M | re.I)[0][0]
         meter_total = float(raw_meter_numbers.replace(',', ''))
-        self.logger.info(f"[Cycling] {user_id}: {meter_total}")
+        self.logger.info(f"[Swimming] {user_id}: {meter_total}")
         return meter_total
 
-    def _get_cycling_kilometers(self, user_id, response):
-        CYCLING_KM_TOTAL_SELECTOR = '#cycling-ytd > tr:nth-child(1) > td:nth-child(2)'
-        raw_km = response.css(CYCLING_KM_TOTAL_SELECTOR).extract_first()
+    def _get_cycling_kilometers(self, user_id, response, sport_tab_index):
+        KM_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(2) td:nth-child(2)' % sport_tab_index
+        raw_km = response.css(KM_TOTAL_SELECTOR).extract_first()
         raw_km_numbers = re.findall(r'<td>(([0-9]*[,]?[0-9]*[.])?[0-9]+) km</td>', raw_km, re.M | re.I)[0][0]
         km_total = float(raw_km_numbers.replace(',', ''))
         self.logger.info(f"[Cycling] {user_id}: {km_total}")
         return km_total
 
-    def _get_running_kilometers(self, user_id, response):
-        CYCLING_KM_TOTAL_SELECTOR = '#running-ytd > tr:nth-child(1) > td:nth-child(2)'
-        raw_km = response.css(CYCLING_KM_TOTAL_SELECTOR).extract_first()
+    def _get_cycling_elevation(self, user_id, response, sport_tab_index):
+        M_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(3) td:nth-child(2)' % sport_tab_index
+        raw_meter = response.css(M_TOTAL_SELECTOR).extract_first()
+        raw_meter_numbers = re.findall(r'<td>(([0-9]*[,]?[0-9]*)) m</td>', raw_meter, re.M | re.I)[0][0]
+        meter_total = float(raw_meter_numbers.replace(',', ''))
+        self.logger.info(f"[Cycling] elevation {user_id}: {meter_total}")
+        return meter_total
+
+    def _get_running_kilometers(self, user_id, response, sport_tab_index):
+        KM_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(2) td:nth-child(2)' % sport_tab_index
+        raw_km = response.css(KM_TOTAL_SELECTOR).extract_first()
         raw_km_numbers = re.findall(r'<td>(([0-9]*[,]?[0-9]*[.])?[0-9]+) km</td>', raw_km, re.M | re.I)[0][0]
         km_total = float(raw_km_numbers.replace(',', ''))
         self.logger.info(f"[Running] {user_id}: {km_total}")
