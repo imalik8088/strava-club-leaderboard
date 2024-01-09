@@ -87,9 +87,11 @@ class StravaSpider(scrapy.Spider):
         sport_tab_index_for_run = self._get_sport_tab_index(response, 'Run')
         running_km = 0
         running_hours = 0
+        running_elevation = 0
         if sport_tab_index_for_run != None:
             running_km = self._get_running_kilometers(user_id, response, sport_tab_index_for_run)
             running_hours = self._get_running_hours(user_id, response, sport_tab_index_for_run)
+            running_elevation = self._get_running_elevation(user_id, response, sport_tab_index_for_run)
 
         # cycling
         sport_tab_index_for_cycling = self._get_sport_tab_index(response, 'Ride')
@@ -116,6 +118,7 @@ class StravaSpider(scrapy.Spider):
             'cycling_elevation_in_meter': cycling_elevation,
             'running_distance_in_km': running_km,
             'running_duration_in_minute': running_hours,
+            'running_elevation_in_meter': running_elevation,
             'swimming_distance_in_meter': swim_km,
             'swimming_duration_in_minute': swim_hours
         }, self.Leaderboard.user_id == user_id)
@@ -187,6 +190,14 @@ class StravaSpider(scrapy.Spider):
         raw_meter_numbers = re.findall(r'<td>(([0-9]*[,]?[0-9]*)) m</td>', raw_meter, re.M | re.I)[0][0]
         meter_total = float(raw_meter_numbers.replace(',', ''))
         self.logger.info(f"[Cycling] elevation {user_id}: {meter_total}")
+        return meter_total
+
+    def _get_running_elevation(self, user_id, response, sport_tab_index):
+        M_TOTAL_SELECTOR = 'tbody#%s-ytd > tr:nth-child(4) td:nth-child(2)' % sport_tab_index
+        raw_meter = response.css(M_TOTAL_SELECTOR).extract_first()
+        raw_meter_numbers = re.findall(r'<td>(([0-9]*[,]?[0-9]*)) m</td>', raw_meter, re.M | re.I)[0][0]
+        meter_total = float(raw_meter_numbers.replace(',', ''))
+        self.logger.info(f"[Running] elevation {user_id}: {meter_total}")
         return meter_total
 
     def _get_running_kilometers(self, user_id, response, sport_tab_index):

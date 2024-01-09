@@ -16,6 +16,7 @@ class User(BaseModel):
     cycling_elevation_in_meter: Optional[int] = Field(default=0)
     running_distance_in_km: Optional[float] = Field(default=0.0)
     running_duration_in_minute: Optional[int] = Field(default=0)
+    running_elevation_in_meter: Optional[int] = Field(default=0)
     swimming_distance_in_meter: Optional[float] = Field(default=0.0)
     swimming_duration_in_minute: Optional[int] = Field(default=0)
 
@@ -41,6 +42,7 @@ for entry in get_all_entries:
                   cycling_elevation_in_meter=entry.get('cycling_elevation_in_meter', 0),
                   cycling_duration_in_minute=entry.get('cycling_duration_in_minute', 0),
                   running_distance_in_km=entry.get('running_distance_in_km', 0),
+                  running_elevation_in_meter=entry.get('running_elevation_in_meter', 0),
                   running_duration_in_minute=entry.get('running_duration_in_minute', 0),
                   swimming_distance_in_meter=entry.get('swimming_distance_in_meter', 0),
                   swimming_duration_in_minute=entry.get('swimming_duration_in_minute', 0),
@@ -108,17 +110,18 @@ print()
 class RunnerLeader(BaseModel):
     name: str
     running_distance_in_km: float
+    running_elevation_in_meter: int
 
 
 leaderboard_cycling = []
 for k, v in members.items():
-    leaderboard_cycling.append(RunnerLeader(name=v.name, running_distance_in_km=v.running_distance_in_km))
+    leaderboard_cycling.append(RunnerLeader(name=v.name, running_distance_in_km=v.running_distance_in_km, running_elevation_in_meter=v.running_elevation_in_meter))
 
 running_distance_in_km = sorted(leaderboard_cycling, key=lambda k: k.running_distance_in_km, reverse=True)
 
 print("🏃 Most active runner")
 for index, member in enumerate(running_distance_in_km[:TOP_X_MEBMER], start=1):
-    print(f"{index}. {member.name} - {member.running_distance_in_km} Km")
+    print(f"{index}. {member.name} - {member.running_distance_in_km} Km - {member.running_elevation_in_meter}hm")
 print()
 
 
