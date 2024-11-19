@@ -19,23 +19,10 @@ class StravaSpider(scrapy.Spider):
     Leaderboard = Query()
     club_id = None
     year = None
-    headers = {
-        'authority': 'www.strava.com',
-        'pragma': 'no-cache',
-        'cache-control': 'no-cache',
-        'sec-ch-ua': 'Google Chrome";v="87", " Not;A Brand";v="99", "Chromium";v="87"',
-        'accept': 'text/javascript, application/javascript, application/ecmascript, application/x-ecmascript',
-        'sec-ch-ua-mobile': '?0',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
-        'x-requested-with': 'XMLHttpRequest',
-        'Accept-Encoding': 'gzip, deflate, sdch',
-        'Accept-Language': 'en-US,en;q=0.8'
-    }
 
     def parse(self, response):
         self.logger.info('Visiting %s...' % self.start_urls[0])
-        authenticity_token = response.xpath(
-            '//*[@name="authenticity_token"]/@value').extract_first()
+        authenticity_token = response.xpath('//*[@name="authenticity_token"]/@value').extract_first()
         yield FormRequest.from_response(response,
                                         formdata={
                                             'authenticity_token': authenticity_token,
@@ -44,10 +31,10 @@ class StravaSpider(scrapy.Spider):
                                         meta={'dont_redirect': True, 'handle_httpstatus_list': [302]},
                                         callback=self.after_login)
 
-    def __init__(self, club_id, year=2023, **kwargs):
+    def __init__(self, club_id, year=2024, **kwargs):
         self.club_id = club_id
         self.year = year
-        self.db = TinyDB(f"./db/strava-leaderboard-{club_id}-{year}.json")
+        self.db = TinyDB(f"./db/strava-leaderboard-{year}-{club_id}.json")
 
     def after_login(self, response):
         cookie = response.headers.getlist('Set-Cookie')[0].decode("utf-8").split(';')[0]
@@ -69,7 +56,6 @@ class StravaSpider(scrapy.Spider):
             self.db.upsert({'user_id': user_id, 'name': user_name, 'profile_url': profile_url}, self.Leaderboard.user_id == user_id)
 
             yield scrapy.Request(url=comparision_data_url,
-                                 headers=self.headers,
                                  cookies=self.cookies,
                                  callback=self.profile_crawler)
 

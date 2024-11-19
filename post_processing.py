@@ -29,7 +29,7 @@ def _minutes_in_hours(minutes):
 
 TOP_X_MEBMER = 10
 
-db: Table = TinyDB('./db/strava-leaderboard-285486-2023.json')
+db: Table = TinyDB('./db/strava-leaderboard-2024-285486.json')
 Leaderboard = Query()
 
 members = {}
