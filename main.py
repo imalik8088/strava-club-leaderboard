@@ -1,5 +1,6 @@
 import os
 import re
+from time import sleep
 
 from dotenv import load_dotenv
 from playwright.sync_api import Page, sync_playwright
@@ -40,11 +41,14 @@ class StravaScraper:
         # Fill in login form
         page.get_by_role("textbox", name="Email").fill(self.email)
         page.get_by_role("button", name="Log In").click()
+        sleep(3)
 
         # Use password instead
         try:
             page.get_by_role("button", name="Use password instead").click(timeout=3000)
+            sleep(2)
             page.get_by_role("textbox", name="Password").fill(self.password)
+            sleep(2)
             page.get_by_role("button", name="Log in").click()
         except:
             # Password field might be already visible
@@ -68,7 +72,6 @@ class StravaScraper:
             # Get all member links
             member_links = page.locator('div.border-top > ul.list-athletes > li > div.text-headline a')
             count = member_links.count()
-            print(f"---------> Found {count} members")
 
             if count == 0:
                 print("No more members found")
@@ -125,7 +128,9 @@ class StravaScraper:
         try:
             private_message = page.get_by_text("This Account Is Private")
             if private_message.count() > 0:
-                print(f"User {user_id} has a private account - skipping")
+                if page.get_by_role("button", name="Request to Follow").count() > 0:
+                    page.get_by_role("button", name="Request to Follow").click(timeout=2000)
+                print(f"User {user_id} has a private account - skipping • 👤 follow requested")
                 self.db.upsert(
                     {'profile_is_private': True},
                     self.leaderboard.user_id == user_id
@@ -234,7 +239,7 @@ class StravaScraper:
     def run(self) -> None:
         """Main execution method"""
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(headless=False)
             context = browser.new_context()
             page = context.new_page()
 
