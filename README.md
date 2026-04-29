@@ -6,8 +6,8 @@ of the club.
 
 ## Usage
 ```bash
-scrapy crawl strava -a club_id=2282432
-python post_processing.py
+uv run main.py
+uv run post_processing.py
 ```
 #### Output
 
@@ -28,15 +28,6 @@ parsed xxx members
 ```
 
  
-## Install
-```bash
-# if you're using virtualenv
-virtualenv -p python3.8 venv
-source ./venv/bin/activate
-
-pip install -r requirements.txt
-```
-
 ### Todo/Issues
   - [ ] duplicate/cleanup code
   - [ ] cleanup hacked post_processing.py file
